@@ -3,25 +3,28 @@ import pandas as pd
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import json # 追加
-import os   # 追加
+import json
+import os
+import base64 # ★追加忘れずに！
 
-# --- 設定：ページレイアウト ---
-st.set_page_config(page_title="My Daily Report (Cloud)", layout="centered")
-st.title("☁️ 業務日報アプリ (Cloud版)")
+# ... (タイトル設定などはそのまま) ...
 
 # ==========================================
 # Googleスプレッドシート接続設定
 # ==========================================
 @st.cache_resource
 def get_worksheet():
-    # --- クラウド対応：secrets.json が無い場合、st.secrets から作成する ---
+    # --- クラウド対応：Base64エンコードされた鍵を復元する ---
     if not os.path.exists('secrets.json'):
-        # Cloud上の設定(Secrets)からjsonの中身を取得してファイルを作成
-        if 'gcp_json' in st.secrets:
-            with open('secrets.json', 'w') as f:
-                f.write(st.secrets['gcp_json'])
-    
+        # Secretsに 'gcp_encoded' がある場合（今回の最強パターン）
+        if 'gcp_encoded' in st.secrets:
+            # 英数字の塊を、元のJSONに戻してファイル作成
+            decoded_bytes = base64.b64decode(st.secrets['gcp_encoded'])
+            with open('secrets.json', 'wb') as f:
+                f.write(decoded_bytes)
+        
+        # (念のため以前のパターンも残すならここですが、今回は↑だけでOK)
+
     # 2つのAPIを操作する権限を設定
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('secrets.json', scope)
