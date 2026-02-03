@@ -3,29 +3,35 @@ import pandas as pd
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import json # 追加
+import os   # 追加
 
 # --- 設定：ページレイアウト ---
-# .streamlit/config.toml があればライトモードになります
 st.set_page_config(page_title="My Daily Report (Cloud)", layout="centered")
-
 st.title("☁️ 業務日報アプリ (Cloud版)")
 
 # ==========================================
 # Googleスプレッドシート接続設定
 # ==========================================
-# 何度も接続し直さないようにキャッシュ（記憶）する設定
 @st.cache_resource
 def get_worksheet():
+    # --- クラウド対応：secrets.json が無い場合、st.secrets から作成する ---
+    if not os.path.exists('secrets.json'):
+        # Cloud上の設定(Secrets)からjsonの中身を取得してファイルを作成
+        if 'gcp_json' in st.secrets:
+            with open('secrets.json', 'w') as f:
+                f.write(st.secrets['gcp_json'])
+    
     # 2つのAPIを操作する権限を設定
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    # secrets.jsonを読み込む
     creds = ServiceAccountCredentials.from_json_keyfile_name('secrets.json', scope)
     client = gspread.authorize(creds)
     
-    # スプレッドシートを開く (名前は作成したものに合わせてください)
-    # ※もしシート名を変えた場合はここも変更してください
+    # スプレッドシートを開く
     sheet = client.open("daily_report_db").sheet1
     return sheet
+
+# ... (以下、try接続処理などはそのまま) ...
 
 # 接続を試みる（失敗したらエラーを表示）
 try:
